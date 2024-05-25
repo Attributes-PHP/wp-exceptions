@@ -5,8 +5,8 @@
  * goes wrong. It supports JSON and HTML response.
  *
  * @version 1.0.1
+ *
  * @author matapatos
- * @package wp-exceptions
  */
 
 declare(strict_types=1);
@@ -18,8 +18,8 @@ use Illuminate\Contracts\Support\Responsable;
 use Throwable;
 use Wp\Exceptions\Responses\HtmlResponse;
 use Wp\Exceptions\Responses\JsonResponse;
-use WP_Http;
 use WP_Error;
+use WP_Http;
 use WP_Rewrite;
 
 class HttpException extends Exception implements Responsable
@@ -66,7 +66,7 @@ class HttpException extends Exception implements Responsable
     public static function fromWpError(WP_Error $error): HttpException
     {
         $status = $error->get_error_code();
-        if (!is_int($status)) {
+        if (! is_int($status)) {
             $status = null;
         }
 
@@ -81,14 +81,16 @@ class HttpException extends Exception implements Responsable
      * Create an HTTP response that represents the object.
      *
      * @version 1.0.0
-     * @param  \Illuminate\Http\Request $request
+     *
+     * @param  \Illuminate\Http\Request  $request
      * @return \Symfony\Component\HttpFoundation\Response
      */
     public function toResponse($request)
     {
-        $isRestRequest = self::isRestRequest();
+        $isRestRequest = $this->isRestRequest();
         $class = $isRestRequest ? JsonResponse::class : HtmlResponse::class;
-        $class = apply_filters('http_exception_response_class', $class, $this);
+        $class = apply_filters('exceptions_response_class', $class, $this);
+
         return new $class($this->message, $this->code, $this->data, $this->headers);
     }
 
@@ -112,11 +114,12 @@ class HttpException extends Exception implements Responsable
      * Checks if a given request is a REST request.
      *
      * @link https://wordpress.stackexchange.com/questions/221202/does-something-like-is-rest-exist#answer-317041
+     *
      * @author matzeeable
      */
-    protected static function isRestRequest(): bool
+    protected function isRestRequest(): bool
     {
-        if (defined('REST_REQUEST') && REST_REQUEST) {
+        if (defined('REST_REQUEST') && \REST_REQUEST) {
             return true;
         }
 
@@ -131,6 +134,7 @@ class HttpException extends Exception implements Responsable
 
         $restUrl = wp_parse_url(trailingslashit(rest_url()));
         $currentUrl = wp_parse_url(add_query_arg([]));
+
         return strpos($currentUrl['path'] ?? '/', $restUrl['path'], 0) === 0;
     }
 }

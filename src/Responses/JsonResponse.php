@@ -4,8 +4,8 @@
  * Response used when an http exception is thrown during a REST request.
  *
  * @version 1.0.0
+ *
  * @author matapatos
- * @package wp-exceptions
  */
 
 declare(strict_types=1);
@@ -42,8 +42,8 @@ class JsonResponse extends BaseJsonResponse
         array $data = []
     ) {
         $content = [
-            'message'   => __($message),
-            'code'      => $status,
+            'message' => __($message),
+            'code' => $status,
         ];
         if ($data) {
             $content['data'] = $data;

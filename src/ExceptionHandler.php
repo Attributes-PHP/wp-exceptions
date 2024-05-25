@@ -1,12 +1,10 @@
 <?php
 
-namespace Roots\Acorn\Bootstrap;
+namespace Wp\Exceptions;
 
-use Throwable;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Bootstrap\HandleExceptions as FoundationHandleExceptionsBootstrapper;
-
-use function apply_filters;
+use Throwable;
 
 class HandleExceptions extends FoundationHandleExceptionsBootstrapper
 {
@@ -22,7 +20,7 @@ class HandleExceptions extends FoundationHandleExceptionsBootstrapper
 
         $this->app = $app;
 
-        if (!$this->isDebug() || $this->hasHandler()) {
+        if (! $this->isDebug() || $this->hasHandler()) {
             return;
         }
 
@@ -78,14 +76,13 @@ class HandleExceptions extends FoundationHandleExceptionsBootstrapper
      */
     protected function hasHandler()
     {
-        return !$this->app->runningInConsole()
-            && is_readable(WP_CONTENT_DIR . '/fatal-error-handler.php');
+        return ! $this->app->runningInConsole()
+            && is_readable(WP_CONTENT_DIR.'/fatal-error-handler.php');
     }
 
     /**
      * Render an exception as an HTTP response and send it.
      *
-     * @param  \Throwable  $e
      * @return void
      */
     protected function renderHttpResponse(Throwable $e)
