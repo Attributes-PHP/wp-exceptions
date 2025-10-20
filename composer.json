@@ -1,8 +1,8 @@
 {
-  "name": "matapatos/wp-exceptions",
+  "name": "attributes-php/wp-exceptions",
   "type": "library",
   "license": "MIT",
-  "description": "Don't feel sorry to interrupt. WordPress exceptions made easy",
+  "description": "Rely on exceptions instead of the WP_Error. WordPress exceptions made easy",
   "authors": [
     {
       "name": "André Gil"
@@ -17,24 +17,23 @@
   },
   "autoload": {
     "psr-4": {
-      "Wp\\Exceptions\\": "src/"
+      "Attributes\\Wp\\Exceptions\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "Wp\\Exceptions\\Tests\\": "tests/"
+      "Attributes\\Wp\\Exceptions\\Tests\\": "tests/"
     }
   },
   "require": {
-    "php": "^7.4|^8.0",
-    "illuminate/contracts": ">=5.5",
-    "symfony/http-foundation": ">=5.0"
+    "php": "^7.4|^8.0"
   },
   "require-dev": {
     "mockery/mockery": "^1.6",
     "brain/monkey": "2.*",
     "dingo-d/wp-pest": "^1.6",
-    "laravel/pint": "*"
+    "laravel/pint": "*",
+    "rector/rector": "^2.2"
   },
   "prefer-stable": true,
   "scripts": {

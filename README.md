@@ -1,3 +1,3 @@
-# WordPress Exceptions
+# WP Exceptions
 
-Don't feel sorry to interrupt. WordPress exceptions made simple.
+Stop returning WP_Error's. Throw exceptions instead.

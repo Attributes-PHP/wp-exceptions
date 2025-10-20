@@ -1,6 +1,6 @@
 <?php
 
-use Wp\Exceptions\Tests\Helpers\Helpers;
+use Attributes\Wp\Exceptions\Tests\Helpers\Helpers;
 use Yoast\WPTestUtils\WPIntegration;
 
 /**

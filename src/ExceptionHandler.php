@@ -1,96 +1,143 @@
 <?php
 
-namespace Wp\Exceptions;
+/**
+ * Holds logic to register custom WordPress exception handler
+ *
+ * @author André Gil
+ */
 
-use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Foundation\Bootstrap\HandleExceptions as FoundationHandleExceptionsBootstrapper;
+declare(strict_types=1);
+
+namespace Attributes\Wp\Exceptions;
+
 use Throwable;
 
-class HandleExceptions extends FoundationHandleExceptionsBootstrapper
+use function wp_die;
+
+class ExceptionHandler
 {
     /**
-     * Bootstrap the given application.
+     * Reserves memory so that errors can be displayed properly on memory exhaustion e.g. out-of-memory errors.
      *
-     * @param  \Roots\Acorn\Application  $app
-     * @return void
+     * @var string|null
      */
-    public function bootstrap(Application $app)
+    protected static $reservedMemory;
+
+    protected bool $isRegistered = false;
+
+    protected $previousHandler = null;
+
+    /**
+     * Set of functions used to handle exceptions
+     *
+     * @var array<string,callable>
+     */
+    protected array $onExceptionHandlers = [];
+
+    /**
+     * Registers the exception handler
+     */
+    public static function register(bool $force = false): ExceptionHandler
     {
-        self::$reservedMemory = str_repeat('x', 10240);
-
-        $this->app = $app;
-
-        if (! $this->isDebug() || $this->hasHandler()) {
-            return;
+        $exceptionHandler = self::getInstance();
+        if ($exceptionHandler->isRegistered && ! $force) {
+            return $exceptionHandler;
         }
 
-        $this->app->singleton(
-            \Illuminate\Contracts\Debug\ExceptionHandler::class,
-            \Roots\Acorn\Exceptions\Handler::class
-        );
+        $exceptionHandler->isRegistered = true;
+        $exceptionHandler::$reservedMemory = str_repeat('x', 32768);
+        $previousHandler = set_exception_handler($exceptionHandler);
+        if ($previousHandler && $previousHandler != $exceptionHandler) {
+            $exceptionHandler->previousHandler = $previousHandler;
+        }
+        $exceptionHandler->onException(HttpException::class, [$exceptionHandler, 'handleHttpException']);
 
-        set_error_handler([$this, 'handleError']);
-        set_exception_handler([$this, 'handleException']);
-        register_shutdown_function([$this, 'handleShutdown']);
+        return $exceptionHandler;
     }
 
     /**
-     * Report PHP deprecations, or convert PHP errors to ErrorException instances.
+     * Adds a handler for a given exception.
      *
-     * @param  int  $level
-     * @param  string  $message
-     * @param  string  $file
-     * @param  int  $line
-     * @param  array  $context
-     * @return void|false
+     * Handlers will be resolved on the following order: 1) by same exact exception or 2) by a parent class
      *
-     * @throws \ErrorException
+     * @param  string  $exceptionClass  The exception class to add a handler.
+     * @param  callable  $handler  The handler to resolve those types of exceptions.
+     * @param  bool  $override  If set, overrides any existent handler. Default value: false.
      */
-    public function handleError($level, $message, $file = '', $line = 0, $context = [])
+    public function onException(string $exceptionClass, callable $handler, bool $override = false): ExceptionHandler
     {
-        try {
-            parent::handleError($level, $message, $file, $line, $context);
-        } catch (Throwable $e) {
-            if (! apply_filters('acorn/throw_error_exception', true, $e)) {
-                return false;
+        if (isset($this->onExceptionHandlers[$exceptionClass]) && ! $override) {
+            return $this;
+        }
+
+        $this->onExceptionHandlers[$exceptionClass] = $handler;
+
+        return $this;
+    }
+
+    /**
+     * Handles non-handled exceptions
+     *
+     * @internal
+     */
+    public function __invoke(Throwable $ex): void
+    {
+        $handler = $this->getExceptionHandler($ex) ?: $this->previousHandler;
+        if (! $handler) {
+            throw $ex;
+        }
+
+        call_user_func($handler, $ex);
+    }
+
+    /**
+     * Retrieves the exception handler for a given exception, if exists.
+     *
+     * @param  Throwable  $exception  The exception to be handled.
+     * @return ?callable Returns a callable to handle that exception or null if not found
+     */
+    protected function getExceptionHandler(Throwable $exception): ?callable
+    {
+        if (isset($this->onExceptionHandlers[$exception::class])) {
+            return $this->onExceptionHandlers[$exception::class];
+        }
+
+        foreach ($this->onExceptionHandlers as $exceptionClass => $handler) {
+            if (is_subclass_of($exception, $exceptionClass)) {
+                return $handler;
             }
-
-            throw $e;
-        }
-    }
-
-    /**
-     * Determine whether application debugging is enabled.
-     *
-     * @return bool
-     */
-    protected function isDebug()
-    {
-        return $this->app->config->get('app.debug', WP_DEBUG);
-    }
-
-    /**
-     * Determine whether a fatal error handler drop-in exists.
-     *
-     * @return bool
-     */
-    protected function hasHandler()
-    {
-        return ! $this->app->runningInConsole()
-            && is_readable(WP_CONTENT_DIR.'/fatal-error-handler.php');
-    }
-
-    /**
-     * Render an exception as an HTTP response and send it.
-     *
-     * @return void
-     */
-    protected function renderHttpResponse(Throwable $e)
-    {
-        if (ob_get_length()) {
-            ob_end_clean();
         }
 
-        parent::renderHttpResponse($e);
+        return null;
+    }
+
+    protected function handleHttpException(HttpException $ex): void
+    {
+        if (! function_exists('wp_die')) {
+            require_once ABSPATH.WPINC.'/functions.php';
+        }
+
+        if (! class_exists('WP_Error')) {
+            require_once ABSPATH.WPINC.'/class-wp-error.php';
+        }
+
+        wp_die($ex->toWpError());
+    }
+
+    /**
+     * Retrieves an instance of this class. If it doesn't exist will store it on a global variable,
+     * to allow compatibility with tools like Mozart which change the namespace.
+     */
+    public static function getInstance(): ExceptionHandler
+    {
+        global $attributes_wp_exceptions_exception_handler;
+
+        if ($attributes_wp_exceptions_exception_handler) {
+            return $attributes_wp_exceptions_exception_handler;
+        }
+
+        $attributes_wp_exceptions_exception_handler = new static;
+
+        return $attributes_wp_exceptions_exception_handler;
     }
 }
