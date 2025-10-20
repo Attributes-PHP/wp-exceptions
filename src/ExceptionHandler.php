@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 namespace Attributes\Wp\Exceptions;
 
+use Exception;
 use Throwable;
 
 use function wp_die;
@@ -33,6 +34,8 @@ class ExceptionHandler
      * @var array<string,callable>
      */
     protected array $onExceptionHandlers = [];
+
+    protected $invoker = null;
 
     /**
      * Registers the exception handler
@@ -87,7 +90,13 @@ class ExceptionHandler
             throw $ex;
         }
 
-        call_user_func($handler, $ex);
+        if (! $this->invoker) {
+            call_user_func($handler, $ex);
+
+            return;
+        }
+
+        call_user_func($this->invoker, $handler, $ex);
     }
 
     /**
@@ -121,12 +130,18 @@ class ExceptionHandler
             require_once ABSPATH.WPINC.'/class-wp-error.php';
         }
 
+        if (! headers_sent() && (! function_exists('did_action') || ! did_action('admin_head'))) {
+            foreach ($ex->getHeaders() as $name => $value) {
+                header("$name: $value");
+            }
+        }
+
         wp_die($ex->toWpError());
     }
 
     /**
-     * Retrieves an instance of this class. If it doesn't exist will store it on a global variable,
-     * to allow compatibility with tools like Mozart which change the namespace.
+     * Retrieves an instance of this class. If it doesn't exist creates a new one and stores it in a global
+     * variable, to be compatible with tools like Mozart or PHP-Scoper which change the namespace.
      */
     public static function getInstance(): ExceptionHandler
     {
@@ -139,5 +154,10 @@ class ExceptionHandler
         $attributes_wp_exceptions_exception_handler = new static;
 
         return $attributes_wp_exceptions_exception_handler;
+    }
+
+    public function setInvoker(callable $invoker): void
+    {
+        $this->invoker = $invoker;
     }
 }

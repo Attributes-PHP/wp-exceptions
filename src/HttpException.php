@@ -35,25 +35,32 @@ class HttpException extends Exception
 
     protected ?WP_Error $wpError = null;
 
+    /**
+     * @param  int  $status  HTTP status code to be sent
+     * @param  string  $message  Short description
+     * @param  array<string,mixed>  $data  Additional data to be sent
+     * @param  array<string,mixed>  $headers  Headers to be sent
+     */
     public function __construct(
         int $status = WP_Http::INTERNAL_SERVER_ERROR,
         string $message = 'Something went wrong',
         array $data = [],
         array $headers = [],
         ?Throwable $previous = null,
-        ?WP_Error $wpError = null,
     ) {
+        $this->status = $status;
         $this->data = $data;
-        $this->data['status'] = $status;
+        $this->data['status'] = $this->status;
 
         $this->headers = $headers;
-        $this->status = $status;
-        $this->wpError = $wpError;
         parent::__construct($message, $this->status, $previous);
     }
 
     /**
      * Creates a new instance using a WP_Error class
+     *
+     * @param  WP_Error  $error  The WP_Error to base the exception from. Nested WP_Error's are also supported.
+     * @param  int  $defaultStatus  If the provided error code is a string and no 'data.status' is set, this value is used.
      */
     public static function fromWpError(WP_Error $error, int $defaultStatus = 500): HttpException
     {
@@ -61,21 +68,22 @@ class HttpException extends Exception
         $data = $data ?: [];
         $data = is_array($data) ? $data : ['data' => $data];
 
-        $status = $error->get_error_code();
-        if (! is_int($status)) {
-            $status = isset($data['status']) && is_int($data['status']) ? $data['status'] : $defaultStatus;
-        }
+        $status = isset($data['status']) && is_int($data['status']) ? $data['status'] : $error->get_error_code();
+        $status = is_int($status) ? $status : $defaultStatus;
 
-        return new HttpException(
+        $httpException = new HttpException(
             $status,
             $error->get_error_message(),
             $data,
-            [],
-            null,
-            $error,
         );
+        $httpException->wpError = $error;
+
+        return $httpException;
     }
 
+    /**
+     * Converts this exception into a WP_Error object
+     */
     public function toWpError(): WP_Error
     {
         if ($this->wpError) {

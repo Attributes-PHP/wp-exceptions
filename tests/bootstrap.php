@@ -12,6 +12,10 @@ use Yoast\WPTestUtils\WPIntegration;
  * integration tests.
  */
 if (! Helpers::isIntegrationTest()) {
+    if (! class_exists(WP_Error::class)) {
+        require_once dirname(__FILE__, 2).'/wp/src/wp-includes/class-wp-error.php';
+    }
+
     return;
 }
 

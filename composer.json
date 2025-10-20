@@ -2,7 +2,7 @@
   "name": "attributes-php/wp-exceptions",
   "type": "library",
   "license": "MIT",
-  "description": "Rely on exceptions instead of the WP_Error. WordPress exceptions made easy",
+  "description": "Stop returning WP_Error. Throw exceptions instead",
   "authors": [
     {
       "name": "André Gil"
