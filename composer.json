@@ -26,7 +26,7 @@
     }
   },
   "require": {
-    "php": "^7.4|^8.0"
+    "php": "^8.1"
   },
   "require-dev": {
     "mockery/mockery": "^1.6",
@@ -45,7 +45,7 @@
     "setup:wp:6.4": "rm -rf wp/ && ./vendor/bin/wp-pest setup plugin --plugin-slug fastendpoints --wp-version 6.4.4 --skip-delete --no-interaction",
     "setup:wp:latest": "rm -rf wp/ && ./vendor/bin/wp-pest setup plugin --plugin-slug fastendpoints --skip-delete --no-interaction",
     "test:lint": "./vendor/bin/pint --test",
-    "test:coverage": "./vendor/bin/pest --coverage",
+    "test:coverage": "./vendor/bin/pest --coverage --exclude-group=integration",
     "test:unit": "./vendor/bin/pest --colors=always --exclude-group=integration",
     "test:integration": "./vendor/bin/pest --colors=always --group=integration",
     "test": [
