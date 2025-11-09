@@ -31,7 +31,7 @@ We aim to support versions that haven't reached their end-of-life.
 composer require attributes-php/wp-exceptions
 ```
 
-## Docs
+## How it works?
 
 Once the ExceptionHandler is registered, you can start throwing exceptions
 
@@ -41,11 +41,12 @@ use Attributes\Wp\Exceptions\ExceptionHandler;
 ExceptionHandler::register();
 ```
 
-### How *HttpExceptions* are displayed?
+<details>
+<summary><h4>How <b>HttpExceptions</b> are displayed?</h4></summary>
 
-WordPress itself handles how an [*HttpException*](https://github.com/Attributes-PHP/wp-exceptions/blob/main/src/HttpException.php) is displayed to the user.
-In a nutshell, those exceptions are converted into a [*WP_Error*](https://developer.wordpress.org/reference/classes/wp_error/)
-which is then handled by WordPress via [*wp_die*](https://developer.wordpress.org/reference/functions/wp_die/) function.
+WordPress itself handles how an <a href="https://github.com/Attributes-PHP/wp-exceptions/blob/main/src/HttpException.php" target="_blank"><b>HttpException</b></a>
+is displayed to the user. In a nutshell, those exceptions are converted into a <a href="https://developer.wordpress.org/reference/classes/wp_error/" target="_blank"><b>WP_Error</b></a>
+which is then handled by WordPress via <a href="https://developer.wordpress.org/reference/functions/wp_die/" target="_blank"><i>wp_die</i></a> function.
 
 This means, that the following types of requests are supported:
 
@@ -55,26 +56,31 @@ This means, that the following types of requests are supported:
 - ✅ XMLRPC
 - ✅ XML
 - ✅ All other types e.g. HTML
+</details>
 
-### How to send custom HTTP headers?
+<details>
+<summary><h4>How to send custom HTTP headers?</h4></summary>
 
 ```php
 throw new HttpException(400, 'My message', headers: ['My-Header' => 'Value 123']);
 ```
+</details>
 
-### How to add custom handlers?
+<details>
+<summary><h4>How to add custom handlers?</h4></summary>
 
 ```php
 $exceptionHandler = ExceptionHandler::getInstance();
 $exceptionHandler->onException(CustomException::class, fn($ex) => echo "A custom exception has been raised");
 ```
 
-> [!TIP]
-> Add a handler which supports all types of possible requests e.g. REST, XML, etc
+Ensure to add handlers which supports all types of possible requests e.g. JSON, XML, etc
+</details>
 
-### Sage theme support
+<details>
+<summary><h4>Sage theme support</h4></summary>
 
-If you are using [Sage](https://github.com/roots/sage) theme, you would need to register or re-register
+If you are using <a href="https://github.com/roots/sage" target="_blank"><i>Sage</i></a> theme, you would need to register or re-register
 this exception handler after the application is configured. Otherwise, this exception handler might be overrided.
 
 ```php
@@ -88,5 +94,6 @@ Application::configure()
 
 ExceptionHandler::register(force: true); // We are using force true in case the ExceptionHandler has been registered before e.g. in a plugin
 ```
+</details>
 
 WP Exceptions was created by **[André Gil](https://www.linkedin.com/in/andre-gil/)** and is open-sourced software licensed under the **[MIT license](https://opensource.org/licenses/MIT)**.
