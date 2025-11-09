@@ -13,7 +13,10 @@ namespace Attributes\Wp\Exceptions\Tests\Unit;
 use Attributes\Wp\Exceptions\ExceptionHandler;
 use Attributes\Wp\Exceptions\HttpException;
 use Attributes\Wp\Exceptions\Tests\Helpers\Helpers;
+use Brain\Monkey\Functions;
 use Exception;
+use Mockery;
+use WP_Error;
 
 $previousHandler = fn () => true;
 
@@ -24,6 +27,13 @@ afterEach(function () {
 
     $attributes_wp_exceptions_exception_handler = null;
 });
+
+function set(string $name, mixed $value): mixed
+{
+    global $attributes_wp_exceptions_exception_handler;
+
+    return Helpers::setNonPublicClassProperty($attributes_wp_exceptions_exception_handler, $name, $value);
+}
 
 function get(string $name): mixed
 {
@@ -164,3 +174,62 @@ test('No exception handler found', function () {
     expect($handler)->toBeNull();
 })
     ->group('exception', 'handler', 'getExceptionHandler');
+
+// __invoke
+
+test('Invokes custom handler', function () {
+    $exceptionHandler = Mockery::mock(ExceptionHandler::class)
+        ->shouldAllowMockingProtectedMethods()
+        ->makePartial();
+    $ex = new Exception('Ignore message');
+    $exceptionHandler->shouldReceive('getExceptionHandler')
+        ->with($ex)
+        ->once()
+        ->andReturn(fn ($ex) => throw new Exception('Working'));
+
+    call_user_func($exceptionHandler, $ex);
+})
+    ->throws(Exception::class, 'Working')
+    ->group('exception', 'handler', '__invoke');
+
+test('Invokes previous exception handler', function () {
+    $exceptionHandler = ExceptionHandler::register();
+    set('previousHandler', fn ($ex) => throw new Exception('Working'));
+    $ex = new Exception('Ignore message');
+    call_user_func($exceptionHandler, $ex);
+})
+    ->throws(Exception::class, 'Working')
+    ->group('exception', 'handler', '__invoke');
+
+test('No handler to invoke', function () {
+    $exceptionHandler = ExceptionHandler::register();
+    set('previousHandler', null);
+    $ex = new Exception('Working');
+    call_user_func($exceptionHandler, $ex);
+})
+    ->throws(Exception::class, 'Working')
+    ->group('exception', 'handler', '__invoke');
+
+test('Custom invoker', function () {
+    $exceptionHandler = ExceptionHandler::register();
+    set('invoker', fn ($handler, $ex) => throw new Exception('Working'));
+    $ex = new HttpException(500, 'Ignore message');
+    call_user_func($exceptionHandler, $ex);
+})
+    ->throws(Exception::class, 'Working')
+    ->group('exception', 'handler', '__invoke');
+
+// handleHttpException
+
+test('Handles HTTP exceptions', function () {
+    Functions\expect('wp_die')->once()->andReturnUsing(fn ($wpError) => expect($wpError)
+        ->toBeInstanceOf(WP_Error::class)
+        ->and($wpError->get_error_code())->toBe(501)
+        ->and($wpError->get_error_message())->toBe('My custom error message')
+        ->and($wpError->get_error_data())->toMatchArray(['custom' => true, 'status' => 501])
+    );
+    $exceptionHandler = ExceptionHandler::register();
+    $ex = new HttpException(501, 'My custom error message', data: ['custom' => true], headers: ['key' => 'value']);
+    call_user_func($exceptionHandler, $ex);
+})
+    ->group('exception', 'handler', 'handleHttpException');
