@@ -10,12 +10,12 @@
 </p>
 
 ------
-*WP_Error* was a cool feature in 2007 but today, we should throw exceptions instead.
+*WP_Error* was a cool feature in 2007 but today we should throw exceptions.
 
 ## Features
 
-- Stops WordPress execution by converting HTTP exceptions into WP_Error's
-- Support for handling custom exceptions
+- Handles *HttpExceptions* like WP_Error's
+- Supports custom handlers for custom exceptions
 - Compatible with other exception handlers (e.g. [Whoops](https://github.com/filp/whoops))
 
 ## Requirements
@@ -31,4 +31,62 @@ We aim to support versions that haven't reached their end-of-life.
 composer require attributes-php/wp-exceptions
 ```
 
-WP FastEndpoints was created by **[André Gil](https://www.linkedin.com/in/andre-gil/)** and is open-sourced software licensed under the **[MIT license](https://opensource.org/licenses/MIT)**.
+## Docs
+
+Once the ExceptionHandler is registered, you can start throwing exceptions
+
+```php
+use Attributes\Wp\Exceptions\ExceptionHandler;
+
+ExceptionHandler::register();
+```
+
+### How *HttpExceptions* are displayed?
+
+WordPress itself handles how an [*HttpException*](https://github.com/Attributes-PHP/wp-exceptions/blob/main/src/HttpException.php) is displayed to the user.
+In a nutshell, those exceptions are converted into a [*WP_Error*](https://developer.wordpress.org/reference/classes/wp_error/)
+which is then handled by WordPress via [*wp_die*](https://developer.wordpress.org/reference/functions/wp_die/) function.
+
+This means, that the following types of requests are supported:
+
+- ✅ Ajax
+- ✅ JSON
+- ✅ JSONP
+- ✅ XMLRPC
+- ✅ XML
+- ✅ All other types e.g. HTML
+
+### How to send custom HTTP headers?
+
+```php
+throw new HttpException(400, 'My message', headers: ['My-Header' => 'Value 123']);
+```
+
+### How to add custom handlers?
+
+```php
+$exceptionHandler = ExceptionHandler::getInstance();
+$exceptionHandler->onException(CustomException::class, fn($ex) => echo "A custom exception has been raised");
+```
+
+> [!TIP]
+> Add a handler which supports all types of possible requests e.g. REST, XML, etc
+
+### Sage theme support
+
+If you are using [Sage](https://github.com/roots/sage) theme, you would need to register or re-register
+this exception handler after the application is configured. Otherwise, this exception handler might be overrided.
+
+```php
+// themes/sage/functions.php
+
+Application::configure()
+    ->withProviders([
+        App\Providers\ThemeServiceProvider::class,
+    ])
+    ->boot();
+
+ExceptionHandler::register(force: true); // We are using force true in case the ExceptionHandler has been registered before e.g. in a plugin
+```
+
+WP Exceptions was created by **[André Gil](https://www.linkedin.com/in/andre-gil/)** and is open-sourced software licensed under the **[MIT license](https://opensource.org/licenses/MIT)**.
