@@ -16,7 +16,7 @@ class Helpers
      * @param  array  $args  - Arguments to be sent over method, if needed.
      * @return mixed
      */
-    public static function invokeNonPublicClassMethod($class, string $methodName, ...$args)
+    public static function invokeMethod($class, string $methodName, ...$args)
     {
         $className = get_class($class);
         $reflection = new ReflectionClass($className);
@@ -33,7 +33,7 @@ class Helpers
      * @param  string  $propertyName  - The name of the property to be retrieved.
      * @return mixed
      */
-    public static function getNonPublicClassProperty($class, string $propertyName)
+    public static function getProperty($class, string $propertyName)
     {
         $className = get_class($class);
         $reflection = new ReflectionClass($className);
@@ -44,13 +44,13 @@ class Helpers
     }
 
     /**
-     * Retrieves the value of a private/protected class property
+     * Set's the value of a private/protected class property
      *
      * @param  object  $class  - Class containing the private/protected property.
      * @param  string  $propertyName  - The name of the property to be updated.
      * @param  mixed  $propertyValue  - The new value of the property.
      */
-    public static function setNonPublicClassProperty($class, string $propertyName, $propertyValue): void
+    public static function setProperty($class, string $propertyName, $propertyValue): void
     {
         $className = get_class($class);
         $reflection = new ReflectionClass($className);

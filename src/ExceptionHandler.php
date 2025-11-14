@@ -10,13 +10,15 @@ declare(strict_types=1);
 
 namespace Attributes\Wp\Exceptions;
 
-use Exception;
 use Throwable;
+use WP_Error;
 
 use function wp_die;
 
 class ExceptionHandler
 {
+    protected static ?self $instance = null;
+
     /**
      * Reserves memory so that errors can be displayed properly on memory exhaustion e.g. out-of-memory errors.
      *
@@ -35,14 +37,17 @@ class ExceptionHandler
      */
     protected array $onExceptionHandlers = [];
 
+    /**
+     * If set, it's used to call the exception handlers. Otherwise, the handlers will be called directly.
+     */
     protected $invoker = null;
 
     /**
      * Registers the exception handler
      */
-    public static function register(bool $force = false): ExceptionHandler
+    public static function register(bool $force = false): self
     {
-        $exceptionHandler = self::getInstance();
+        $exceptionHandler = self::getOrCreate();
         if ($exceptionHandler->isRegistered && ! $force) {
             return $exceptionHandler;
         }
@@ -53,7 +58,7 @@ class ExceptionHandler
         if ($previousHandler && $previousHandler != $exceptionHandler) {
             $exceptionHandler->previousHandler = $previousHandler;
         }
-        $exceptionHandler->onException(HttpException::class, [$exceptionHandler, 'handleHttpException']);
+        $exceptionHandler->onException(HttpException::class, [$exceptionHandler, 'handleHttpException'], override: true);
 
         return $exceptionHandler;
     }
@@ -67,7 +72,7 @@ class ExceptionHandler
      * @param  callable  $handler  The handler to resolve those types of exceptions.
      * @param  bool  $override  If set, overrides any existent handler. Default value: false.
      */
-    public function onException(string $exceptionClass, callable $handler, bool $override = false): ExceptionHandler
+    public function onException(string $exceptionClass, callable $handler, bool $override = false): self
     {
         if (isset($this->onExceptionHandlers[$exceptionClass]) && ! $override) {
             return $this;
@@ -85,6 +90,10 @@ class ExceptionHandler
      */
     public function __invoke(Throwable $ex): void
     {
+        if (! class_exists('WP_Error')) {
+            require_once ABSPATH.WPINC.'/class-wp-error.php';
+        }
+
         $handler = $this->getExceptionHandler($ex) ?: $this->previousHandler;
         if (! $handler) {
             throw $ex;
@@ -120,40 +129,37 @@ class ExceptionHandler
         return null;
     }
 
-    protected function handleHttpException(HttpException $ex): void
+    /**
+     * @param  HttpException  $ex  - The exception to be handled. We purposely didn't type-hint in case Mozart or PHP-Scoper is used
+     */
+    protected function handleHttpException($ex): void
     {
-        if (! function_exists('wp_die')) {
-            require_once ABSPATH.WPINC.'/functions.php';
-        }
-
-        if (! class_exists('WP_Error')) {
-            require_once ABSPATH.WPINC.'/class-wp-error.php';
-        }
-
         if (! headers_sent() && (! function_exists('did_action') || ! did_action('admin_head'))) {
             foreach ($ex->getHeaders() as $name => $value) {
                 header("$name: $value");
             }
         }
 
-        wp_die($ex->toWpError());
+        static::die($ex->toWpError());
     }
 
     /**
-     * Retrieves an instance of this class. If it doesn't exist creates a new one and stores it in a global
-     * variable, to be compatible with tools like Mozart or PHP-Scoper which change the namespace.
+     * Stops WordPress execution by calling wp_die
      */
-    public static function getInstance(): ExceptionHandler
+    public static function die(WP_Error $wpError): void
     {
-        global $attributes_wp_exceptions_exception_handler;
-
-        if ($attributes_wp_exceptions_exception_handler) {
-            return $attributes_wp_exceptions_exception_handler;
+        if (! function_exists('wp_die')) {
+            require_once ABSPATH.WPINC.'/functions.php';
         }
 
-        $attributes_wp_exceptions_exception_handler = new static;
+        wp_die($wpError);
+    }
 
-        return $attributes_wp_exceptions_exception_handler;
+    public static function getOrCreate(): self
+    {
+        static::$instance = static::$instance ?: new static;
+
+        return static::$instance;
     }
 
     public function setInvoker(callable $invoker): void

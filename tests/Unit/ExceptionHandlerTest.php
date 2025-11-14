@@ -23,30 +23,28 @@ $previousHandler = fn () => true;
 beforeEach(fn () => set_exception_handler($previousHandler));
 
 afterEach(function () {
-    global $attributes_wp_exceptions_exception_handler;
-
-    $attributes_wp_exceptions_exception_handler = null;
+    Helpers::setProperty(ExceptionHandler::getOrCreate(), 'instance', null);
 });
 
 function set(string $name, mixed $value): mixed
 {
-    global $attributes_wp_exceptions_exception_handler;
+    $exceptionHandler = ExceptionHandler::getOrCreate();
 
-    return Helpers::setNonPublicClassProperty($attributes_wp_exceptions_exception_handler, $name, $value);
+    return Helpers::setProperty($exceptionHandler, $name, $value);
 }
 
 function get(string $name): mixed
 {
-    global $attributes_wp_exceptions_exception_handler;
+    $exceptionHandler = ExceptionHandler::getOrCreate();
 
-    return Helpers::getNonPublicClassProperty($attributes_wp_exceptions_exception_handler, $name);
+    return Helpers::getProperty($exceptionHandler, $name);
 }
 
 function invoke(string $name, ...$args): mixed
 {
-    global $attributes_wp_exceptions_exception_handler;
+    $exceptionHandler = ExceptionHandler::getOrCreate();
 
-    return Helpers::invokeNonPublicClassMethod($attributes_wp_exceptions_exception_handler, $name, ...$args);
+    return Helpers::invokeMethod($exceptionHandler, $name, ...$args);
 }
 
 if (! function_exists('get_exception_handler')) {
@@ -59,31 +57,24 @@ if (! function_exists('get_exception_handler')) {
     }
 }
 
-// getInstance
+// getOrCreate
 
 test('Creates/retrieves an instance of an exception handler', function () {
-    global $attributes_wp_exceptions_exception_handler;
-
-    expect($attributes_wp_exceptions_exception_handler)->toBeNull();
-    $exceptionHandler = ExceptionHandler::getInstance();
+    $exceptionHandler = ExceptionHandler::getOrCreate();
     expect($exceptionHandler)
-        ->toBe($attributes_wp_exceptions_exception_handler)
-        ->not->toBeNull()
-        ->and(ExceptionHandler::getInstance())
+        ->toBeInstanceOf(ExceptionHandler::class)
+        ->and(ExceptionHandler::getOrCreate())
         ->toBe($exceptionHandler);
-})->group('exception', 'handler', 'getInstance');
+})->group('exception', 'handler', 'getOrCreate');
 
 // register
 
 test('Registers exception handler', function () {
-    global $attributes_wp_exceptions_exception_handler;
     global $previousHandler;
 
-    expect($attributes_wp_exceptions_exception_handler)->toBeNull();
     $exceptionHandler = ExceptionHandler::register();
     expect($exceptionHandler)
-        ->toBe($attributes_wp_exceptions_exception_handler)
-        ->not->toBeNull()
+        ->toBeInstanceOf(ExceptionHandler::class)
         ->and(get('isRegistered'))->toBeTrue()
         ->and(get('reservedMemory'))->toBeString()
         ->and(get('previousHandler'))->toBe($previousHandler)
@@ -94,7 +85,7 @@ test('Registers exception handler', function () {
 
 test('Forces registration', function () {
     $originalExceptionHandler = ExceptionHandler::register();
-    Helpers::setNonPublicClassProperty($originalExceptionHandler, 'reservedMemory', 'Hello world');
+    Helpers::setProperty($originalExceptionHandler, 'reservedMemory', 'Hello world');
 
     $exceptionHandler = ExceptionHandler::register(force: true);
     expect($exceptionHandler)
