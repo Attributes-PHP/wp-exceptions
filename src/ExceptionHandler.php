@@ -1,7 +1,8 @@
 <?php
 
 /**
- * Holds logic to register custom WordPress exception handler
+ * Holds logic to register custom WordPress exception handler to handle HttpException
+ * or any other custom exceptions
  *
  * @author André Gil
  */
@@ -15,6 +16,10 @@ use WP_Error;
 
 use function wp_die;
 
+/**
+ * Exception handler which once registered handles HttpException's or any other custom exception handlers.
+ * It's fully compatible with other exception handlers, like Whoops.
+ */
 class ExceptionHandler
 {
     protected static ?self $instance = null;
@@ -55,7 +60,7 @@ class ExceptionHandler
         $exceptionHandler->isRegistered = true;
         $exceptionHandler::$reservedMemory = str_repeat('x', 32768);
         $previousHandler = set_exception_handler($exceptionHandler);
-        if ($previousHandler && $previousHandler != $exceptionHandler) {
+        if ($previousHandler && $previousHandler !== $exceptionHandler) {
             $exceptionHandler->previousHandler = $previousHandler;
         }
         $exceptionHandler->onException(HttpException::class, [$exceptionHandler, 'handleHttpException']);
@@ -87,6 +92,8 @@ class ExceptionHandler
      * Handles non-handled exceptions
      *
      * @internal
+     *
+     * @throws Exception - Non-handled exceptions are thrown
      */
     public function __invoke(Throwable $ex): void
     {

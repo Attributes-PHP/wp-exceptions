@@ -62,7 +62,7 @@ This means, that the following types of requests are supported:
 <summary><h4>How to send custom HTTP headers?</h4></summary>
 
 ```php
-throw new HttpException(400, 'My message', headers: ['My-Header' => 'Value 123']);
+throw new HttpException(headers: ['My-Header' => 'Value 123']);
 ```
 </details>
 
@@ -70,7 +70,7 @@ throw new HttpException(400, 'My message', headers: ['My-Header' => 'Value 123']
 <summary><h4>How to add custom handlers?</h4></summary>
 
 ```php
-$exceptionHandler = ExceptionHandler::getInstance();
+$exceptionHandler = ExceptionHandler::getOrCreate();
 $exceptionHandler->onException(CustomException::class, fn($ex) => echo "A custom exception has been raised");
 ```
 

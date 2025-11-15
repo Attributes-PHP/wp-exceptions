@@ -1,8 +1,8 @@
 <?php
 
 /**
- * Holds main exception class that is used to interrupt the WordPress logic when something
- * goes wrong. It supports JSON and HTML response.
+ * Holds exception class which can be used to interrupt the WordPress logic when something
+ * goes wrong. It supports all types of WP requests that wp_die function supports.
  *
  * @author André Gil
  */
@@ -16,6 +16,9 @@ use Throwable;
 use WP_Error;
 use WP_Http;
 
+/**
+ * Exception used to stop WordPress execution which mimics when a WP_Error is returned
+ */
 class HttpException extends Exception
 {
     /**
@@ -86,11 +89,7 @@ class HttpException extends Exception
      */
     public function toWpError(): WP_Error
     {
-        if ($this->wpError) {
-            return $this->wpError;
-        }
-
-        $this->wpError = new WP_Error($this->status, $this->message, $this->data);
+        $this->wpError = $this->wpError ?: new WP_Error($this->status, $this->message, $this->data);
 
         return $this->wpError;
     }
