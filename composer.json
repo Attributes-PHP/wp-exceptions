@@ -50,8 +50,7 @@
     "test:integration": "./vendor/bin/pest --colors=always --group=integration",
     "test": [
       "@test:lint",
-      "@test:unit",
-      "@test:integration"
+      "@test:unit"
     ]
   },
   "config": {
