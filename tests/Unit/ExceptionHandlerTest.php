@@ -69,9 +69,7 @@ test('Creates/retrieves an instance of an exception handler', function () {
 
 // register
 
-test('Registers exception handler', function () {
-    global $previousHandler;
-
+test('Registers exception handler', function () use ($previousHandler) {
     $exceptionHandler = ExceptionHandler::register();
     expect($exceptionHandler)
         ->toBeInstanceOf(ExceptionHandler::class)
@@ -83,14 +81,23 @@ test('Registers exception handler', function () {
 })
     ->group('exception', 'handler', 'register');
 
-test('Forces registration', function () {
+test('Forces registration', function () use ($previousHandler) {
     $originalExceptionHandler = ExceptionHandler::register();
     Helpers::setProperty($originalExceptionHandler, 'reservedMemory', 'Hello world');
 
     $exceptionHandler = ExceptionHandler::register(force: true);
     expect($exceptionHandler)
         ->toBe($originalExceptionHandler)
-        ->and(get('reservedMemory'))->toBeString()->not->toBe('Hello world');
+        ->and(get('reservedMemory'))->toBeString()->not->toBe('Hello world')
+        ->and(get('previousHandler'))->toBe($previousHandler);
+})
+    ->group('exception', 'handler', 'register', 'hey');
+
+test('Already registered', function () {
+    $exceptionHandler = ExceptionHandler::register();
+
+    ExceptionHandler::register();
+    expect(get('previousHandler'))->not->toBe($exceptionHandler);
 })
     ->group('exception', 'handler', 'register');
 
@@ -203,7 +210,7 @@ test('No handler to invoke', function () {
 
 test('Custom invoker', function () {
     $exceptionHandler = ExceptionHandler::register();
-    set('invoker', fn ($handler, $ex) => throw new Exception('Working'));
+    $exceptionHandler->setInvoker(fn ($handler, $ex) => throw new Exception('Working'));
     $ex = new HttpException(500, 'Ignore message');
     call_user_func($exceptionHandler, $ex);
 })

@@ -58,7 +58,7 @@ class ExceptionHandler
         if ($previousHandler && $previousHandler != $exceptionHandler) {
             $exceptionHandler->previousHandler = $previousHandler;
         }
-        $exceptionHandler->onException(HttpException::class, [$exceptionHandler, 'handleHttpException'], override: true);
+        $exceptionHandler->onException(HttpException::class, [$exceptionHandler, 'handleHttpException']);
 
         return $exceptionHandler;
     }
